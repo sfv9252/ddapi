@@ -1,64 +1,60 @@
 const express = require('express');
-const fs = require('fs').promises;
-const cron = require('node-cron');
-const { crawlData } = require('./crawler');
+const puppeteer = require('puppeteer');
+const fs = require('fs');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+const INTERVAL = 1000 * 60 * 5; // 5분마다 크롤링
 
-let targets = [];
+let results = {}; // 크롤링 데이터 저장소
 
-// 크롤링 대상 목록 로드 함수
-async function loadTargets() {
-  try {
-    const data = await fs.readFile('./targets.json', 'utf-8');
-    targets = JSON.parse(data);
-    console.log('크롤링 대상 목록 로드 완료:', targets);
-  } catch (err) {
-    console.error('targets.json 로드 실패:', err);
-    targets = [];
-  }
-}
+async function crawlData() {
+  console.log('크롤링 시작...');
 
-// 시작 시 목록 로드
-loadTargets();
+  const list = JSON.parse(fs.readFileSync('./config.json', 'utf-8'));
+  const browser = await puppeteer.launch({
+    headless: true, // 최신 Puppeteer에서는 true/false로 지정
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
 
-// 10분마다 크롤링 스케줄러 실행
-cron.schedule('*/10 * * * *', async () => {
-  if (targets.length === 0) {
-    console.log('크롤링 대상이 없습니다.');
-    return;
-  }
-  console.log('크롤링 시작', new Date().toLocaleString());
-  for (const target of targets) {
+  for (const { server, name } of list) {
     try {
-      await crawlData(target.server, target.name);
+      const url = `https://dundam.xyz/search?server=${encodeURIComponent(server)}&name=${encodeURIComponent(name)}`;
+      const page = await browser.newPage();
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+      );
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
+      await page.waitForSelector('span.val', { timeout: 10000 });
+
+      const [value1, value2] = await page.$$eval('span.val', elements => {
+        return [
+          elements[1] ? elements[1].textContent.trim() : 'X',
+          elements[2] ? elements[2].textContent.trim() : 'X'
+        ];
+      });
+
+      results[`${server}-${name}`] = { value1, value2, time: new Date().toISOString() };
+      console.log(`✅ ${server}-${name}: ${value1}, ${value2}`);
     } catch (err) {
-      console.error(`크롤링 실패: server=${target.server}, name=${target.name}`, err);
+      console.error(`❌ ${server}-${name} 크롤링 실패:`, err.message);
+      results[`${server}-${name}`] = { value1: 'X', value2: 'X', time: new Date().toISOString() };
     }
   }
-  console.log('크롤링 완료', new Date().toLocaleString());
+
+  await browser.close();
+  console.log('크롤링 완료.');
+}
+
+// 첫 실행 & 주기 실행
+crawlData();
+setInterval(crawlData, INTERVAL);
+
+// API 엔드포인트
+app.get('/', (req, res) => {
+  res.json(results);
 });
 
-app.get('/', async (req, res) => {
-  const server = req.query.server;
-  const name = req.query.name;
-
-  if (!server || !name) {
-    return res.status(400).send('server와 name 파라미터가 필요합니다.');
-  }
-
-  const fileName = `./data_${server}_${name}.json`;
-  try {
-    const data = await fs.readFile(fileName, 'utf-8');
-    const parsed = JSON.parse(data);
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send(`${parsed.value1},${parsed.value2}`);
-  } catch {
-    res.status(500).send('데이터가 없습니다. 잠시 후 다시 시도하세요.');
-  }
-});
-
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`서버 실행중: http://localhost:${PORT}`);
 });
