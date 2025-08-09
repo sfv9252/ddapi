@@ -1,0 +1,28 @@
+[
+  { "server": "bakal", "name": "거수참" },
+  { "server": "bakal", "name": "초승달의기도" },
+  { "server": "bakal", "name": "타키온커터" },
+  { "server": "bakal", "name": "아스트랄비트" },
+  { "server": "bakal", "name": "무릎차기" },
+  { "server": "bakal", "name": "발톱화석" },
+  { "server": "bakal", "name": "킬러스핀" },
+  { "server": "bakal", "name": "도각참" },
+  { "server": "bakal", "name": "힐링시프트" },
+  { "server": "bakal", "name": "트릭플라워" },
+  { "server": "bakal", "name": "찍찍베기" },
+  { "server": "bakal", "name": "괴전파" },
+  { "server": "bakal", "name": "바람타기" },
+  { "server": "bakal", "name": "자이로볼" },
+  { "server": "bakal", "name": "나쁜음모" },
+
+
+  { "server": "cain", "name": "어썸롤" },
+  { "server": "cain", "name": "볼케이노롤" },
+  { "server": "cain", "name": "마리아나걸" },
+  { "server": "cain", "name": "야끼소바면" },
+  { "server": "cain", "name": "살몬테리" },
+  { "server": "cain", "name": "비프우동" },
+  { "server": "cain", "name": "스시콤보" },
+  { "server": "cain", "name": "키메롤" },
+  { "server": "cain", "name": "핫나잇롤" }
+]
